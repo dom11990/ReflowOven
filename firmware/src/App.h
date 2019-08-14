@@ -123,6 +123,8 @@ extern "C" {
         APP_STATES state;
         int led_on;
         Profile_t profile;
+        char * data;
+        char * text;
 
 
 

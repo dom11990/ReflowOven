@@ -56,9 +56,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_definitions.h"
 #include "uart.h"
 #include "temperature.h"
-#include "interface.h"
+#include "app.h"
 #include "debug.h"
-#include "process.h"
 
 
 // *****************************************************************************
@@ -74,9 +73,8 @@ static void _SYS_Tasks ( void );
  
 static void _UART_Tasks(void);
 static void _TEMPERATURE_Tasks(void);
-static void _INTERFACE_Tasks(void);
+static void _APP_Tasks(void);
 static void _DEBUG_Tasks(void);
-static void _PROCESS_Tasks(void);
 
 
 // *****************************************************************************
@@ -112,20 +110,15 @@ void SYS_Tasks ( void )
                 "TEMPERATURE Tasks",
                 1024, NULL, 1, NULL);
 
-    /* Create OS Thread for INTERFACE Tasks. */
-    xTaskCreate((TaskFunction_t) _INTERFACE_Tasks,
-                "INTERFACE Tasks",
+    /* Create OS Thread for APP Tasks. */
+    xTaskCreate((TaskFunction_t) _APP_Tasks,
+                "APP Tasks",
                 2048, NULL, 0, NULL);
 
     /* Create OS Thread for DEBUG Tasks. */
     xTaskCreate((TaskFunction_t) _DEBUG_Tasks,
                 "DEBUG Tasks",
                 1024, NULL, 2, NULL);
-
-    /* Create OS Thread for PROCESS Tasks. */
-    xTaskCreate((TaskFunction_t) _PROCESS_Tasks,
-                "PROCESS Tasks",
-                1024, NULL, 1, NULL);
 
     /**************
      * Start RTOS * 
@@ -197,17 +190,17 @@ static void _TEMPERATURE_Tasks(void)
 
 /*******************************************************************************
   Function:
-    void _INTERFACE_Tasks ( void )
+    void _APP_Tasks ( void )
 
   Summary:
-    Maintains state machine of INTERFACE.
+    Maintains state machine of APP.
 */
 
-static void _INTERFACE_Tasks(void)
+static void _APP_Tasks(void)
 {
     while(1)
     {
-        INTERFACE_Tasks();
+        APP_Tasks();
     }
 }
 
@@ -225,23 +218,6 @@ static void _DEBUG_Tasks(void)
     while(1)
     {
         DEBUG_Tasks();
-    }
-}
-
-
-/*******************************************************************************
-  Function:
-    void _PROCESS_Tasks ( void )
-
-  Summary:
-    Maintains state machine of PROCESS.
-*/
-
-static void _PROCESS_Tasks(void)
-{
-    while(1)
-    {
-        PROCESS_Tasks();
     }
 }
 

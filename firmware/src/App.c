@@ -130,6 +130,8 @@ void APP_Initialize(void) {
     appData.profile.temperatures = pvPortMalloc(sizeof (int)*100);
     appData.profile.times = pvPortMalloc(sizeof (int)*100);
     appData.profile.entries = 0;
+    appData.text = pvPortMalloc(64);
+    appData.data = pvPortMalloc(64);
 
     /* TODO: Initialize your application's state machine and other
      * parameters.
@@ -153,10 +155,6 @@ void APP_Tasks(void) {
             Debug_Write("App initialized", LOG_LEVEL_INFO);
             appData.state = APP_STATE_AWAIT_COMMAND;
 
-            char * data = pvPortMalloc(64);
-            snprintf(data, 64, "Read returned:");
-            //            Debug_Write(data, LOG_LEVEL_INFO);
-
 
             //            while (1) {
             //BSP_DelayUs(200);
@@ -169,23 +167,40 @@ void APP_Tasks(void) {
         case APP_STATE_AWAIT_COMMAND:
         {
 
-            //            Debug_Write("Awaiting command...", LOG_LEVEL_INFO);
-            char * data = pvPortMalloc(64);
-            char * reader = pvPortMalloc(64);
-            memset(reader, 0, 64);
-            memset(data, 0, 64);
-            //try to read one byte
-            int result = Uart_Read(reader, 1, 100);
-            if (!result) {
-                //no errors let's print what we got
-                int read_size = reader[0];
-                result = Uart_Read(reader, read_size, 100);
-                snprintf(data, 64, "%s", reader);
-                Debug_Write(data, LOG_LEVEL_INFO);
-                Parse_Command(reader);
+            Debug_Write("Awaiting command...", LOG_LEVEL_INFO);
+            char index = 0;
+            memset(appData.text, 0, 64);
+            memset(appData.data, 0, 64);
+            while (index < 64) {
+                char temp;
+                if (!Uart_Read(&temp, 1, 1000)) {
+                    appData.data[index] = temp;
+                    if ('\n' == temp) {
+                        //received the end of transmission byte
+                        snprintf(appData.text, 64, "Command received: %s", appData.data);
+                        Debug_Write(appData.text, LOG_LEVEL_INFO);
+                        Parse_Command(appData.data);
+                    }
+                    index++;
+
+                } else {
+                    //had an error so we reset the receive sequence
+                    return;
+                }
+
             }
-            vPortFree(reader);
-            vPortFree(data);
+            //try to read one byte
+            //            int result = Uart_Read(reader, 1, 100);
+            //            if (!result) {
+            //                //no errors let's print what we got
+            //                int read_size = reader[0];
+            //                result = Uart_Read(reader, read_size, 100);
+            //                snprintf(data, 64, "%s", reader);
+            //                Debug_Write(data, LOG_LEVEL_INFO);
+            //                Parse_Command(reader);
+            //            }
+            //            vPortFree(reader);
+            //            vPortFree(data);
 
             if (appData.led_on) {
                 LEDOff();
@@ -205,6 +220,7 @@ void APP_Tasks(void) {
             break;
         }
     }
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
 int Parse_Command(char * command) {
@@ -235,7 +251,7 @@ int Parse_Command(char * command) {
             appData.profile.times[appData.profile.entries] = time;
             appData.profile.temperatures[appData.profile.entries] = temperature;
             appData.profile.entries++;
-            
+
             Sort_Profile_Entries(&appData.profile);
             return 0;
         }
@@ -246,7 +262,7 @@ int Parse_Command(char * command) {
             snprintf(temp, 32, "%d %d",
                     appData.profile.times[i],
                     appData.profile.temperatures[i]);
-            Debug_Write(temp,LOG_LEVEL_INFO);
+            Debug_Write(temp, LOG_LEVEL_INFO);
         }
         vPortFree(temp);
         Debug_Write("VALID COMMAND PROFILE?", LOG_LEVEL_INFO);
@@ -258,12 +274,12 @@ int Parse_Command(char * command) {
         return 0;
     } else if (!strcmp("START", cmd)) {
         //if there are no entires, the profile can't be executed
-        
+
         Debug_Write("VALID COMMAND CLEAR PROFILE", LOG_LEVEL_INFO);
         return 0;
-    }else if (!strcmp("ABORT", cmd)) {
+    } else if (!strcmp("ABORT", cmd)) {
         //if there are no entires, the profile can't be executed
-        
+
         Debug_Write("VALID COMMAND CLEAR PROFILE", LOG_LEVEL_INFO);
         return 0;
     }
@@ -277,7 +293,7 @@ Parse_Error:
 
 void Sort_Profile_Entries(Profile_t* profile) {
 
-    Profile_t * temp_profile = pvPortMalloc(sizeof(Profile_t));
+    Profile_t * temp_profile = pvPortMalloc(sizeof (Profile_t));
     temp_profile->entries = profile->entries;
     temp_profile->temperatures = pvPortMalloc(sizeof (int)*profile->entries);
     temp_profile->times = pvPortMalloc(sizeof (int)*profile->entries);
@@ -289,8 +305,8 @@ void Sort_Profile_Entries(Profile_t* profile) {
         for (j = 0; j < profile->entries; j++) {
             //must be greater than 0, after we find an index we clear it
             //to avoid double counting
-            if (profile->times[j]>0) {
-                if (profile->times[j] < next_time ) {
+            if (profile->times[j] > 0) {
+                if (profile->times[j] < next_time) {
                     index = j;
                     next_time = profile->times[j];
                 }
@@ -303,10 +319,10 @@ void Sort_Profile_Entries(Profile_t* profile) {
         //clear this so we dont double count, it will be restored at the end
         profile->times[index] = 0;
     }
-    memcpy(profile->temperatures,temp_profile->temperatures,sizeof(int)*profile->entries);
-    memcpy(profile->times,temp_profile->times,sizeof(int)*profile->entries);
-    
-    
+    memcpy(profile->temperatures, temp_profile->temperatures, sizeof (int)*profile->entries);
+    memcpy(profile->times, temp_profile->times, sizeof (int)*profile->entries);
+
+
     vPortFree(temp_profile->temperatures);
     vPortFree(temp_profile->times);
     vPortFree(temp_profile);

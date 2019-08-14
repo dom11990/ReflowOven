@@ -202,8 +202,8 @@ void TEMPERATURE_Tasks(void) {
                 temperatureData.average += temperatureData.measured[i];
             temperatureData.average /= AVERAGES;
             char * buffer = pvPortMalloc(32);
-            snprintf(buffer, 32, "Current Temp: %f",
-                    temperatureData.average);
+            snprintf(buffer, 64, "Current Temp: %f Fault: %d",
+                    temperatureData.average,temperatureData.status.fault);
             Debug_Write(buffer, LOG_LEVEL_DEBUG);
             vPortFree(buffer);
             temperatureData.state = TEMPERATURE_START;

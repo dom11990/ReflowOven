@@ -60,9 +60,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "task.h"
 #include "uart.h"
 #include "temperature.h"
-#include "interface.h"
+#include "app.h"
 #include "debug.h"
-#include "process.h"
 
 
 // DOM-IGNORE-BEGIN

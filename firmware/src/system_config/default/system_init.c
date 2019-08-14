@@ -258,9 +258,8 @@ void SYS_Initialize ( void* data )
     /* Initialize the Application */
     UART_Initialize();
     TEMPERATURE_Initialize();
-    INTERFACE_Initialize();
+    APP_Initialize();
     DEBUG_Initialize();
-    PROCESS_Initialize();
 }
 
 
