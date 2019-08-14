@@ -8,9 +8,10 @@ extern UART_DATA uartData;
 //______________________________________________________________________________
 void Uart_Byte_Tx_Callback(const SYS_MODULE_INDEX index)
 {
+    char temp;
     uartData.send_count++;
     UBaseType_t woken = pdFALSE;
-    xSemaphoreGiveFromISR(uartData.tx_space_free, &woken);
+    xQueueReceiveFromISR(uartData.tx_space_free,&temp, &woken);
     portEND_SWITCHING_ISR(woken);
 }
 void Uart_Byte_Rx_Callback(const SYS_MODULE_INDEX index)

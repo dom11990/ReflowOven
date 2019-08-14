@@ -141,18 +141,15 @@ void UART_Tasks(void)
         //call transmit
 
         while (req.size > req.index)
-        {
-//            uartData.tx
+        {   
+            char temp = 0;
+            //blocks here until a spot in the queue opens up
+            xQueueSend(uartData.tx_space_free,&temp,portMAX_DELAY);
             DRV_USART_WriteByte(uartData.uart, req.buffer[req.index]);
             req.index++;
-            if (req.index == req.size)
-            {
-                //we're done!!
-                //wait for the final semaphore to come out
-                vPortFree(req.buffer);
-            }
-
         }
+        //done with the transmit, free the buffer
+        vPortFree(req.buffer);
 
 
     } else

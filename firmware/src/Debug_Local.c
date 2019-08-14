@@ -9,9 +9,11 @@ void Debug_Byte_Tx_Callback(const SYS_MODULE_INDEX index)
 {
     debugData.send_count++;
     UBaseType_t woken = pdFALSE;
+    
+    char temp;
     //the value is irrelevant, only that something is pushed into the queue
-    char temp = 1;
-    xQueueSendFromISR(debugData.tx_space_free,&temp, &woken);
+    //so that the other processed know there is space
+    xQueueReceiveFromISR(debugData.tx_space_free,&temp, &woken);
     portEND_SWITCHING_ISR(woken);
     
 }

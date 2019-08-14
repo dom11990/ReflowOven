@@ -98,13 +98,11 @@ void DEBUG_Initialize(void) {
 
     debugData.q_request = xQueueCreate(10, sizeof (DEBUG_REQUEST));
 
-    debugData.tx_space_free = xQueueCreate(TX_FIFO_DEPTH,sizeof(char));
-    char i = TX_FIFO_DEPTH;
-    //load the transmit queue with the TX_FIFO_DEPTH
-    for(i;i;i--){
-        xQueueSend(debugData.tx_space_free,&i,portMAX_DELAY);
-    }
-    
+    //    the queue is used to lock writes to the uart buffer
+    //    when the queue is full, nothing can be written
+    //    the callback isr dequeues
+    debugData.tx_space_free = xQueueCreate(TX_FIFO_DEPTH, sizeof (char));
+
     debugData.rx_bytes = xQueueCreate(RX_BUFFER_SIZE, sizeof (char));
 
     debugData.lock = xSemaphoreCreateMutex();
@@ -157,24 +155,13 @@ void DEBUG_Tasks(void) {
         //call transmit
 
         while (req.size > req.index) {
-//            if (DRV_USART_TransmitBufferIsFull(debugData.uart)) {
-//                BSP_DelayUs(100);
-//                //CHECKING WHAT IT WOULD BE LIKE IF BLOCKING
-//                //xSemaphoreTake(debugData.tx_space_free, portMAX_DELAY);
-//            }
+
             char q_temp;
-            xQueueReceive(debugData.tx_space_free,&q_temp,portMAX_DELAY);
+            xQueueSend(debugData.tx_space_free, &q_temp, portMAX_DELAY);
             DRV_USART_WriteByte(debugData.uart, req.buffer[req.index]);
             req.index++;
-            if (req.index == req.size) {
-                //we're done!!
-                //wait for the final semaphore to come out
-                vPortFree(req.buffer);
-                  //CHECKING WHAT IT WOULD BE LIKE IF BLOCKING  
-                //          xSemaphoreTake(debugData.tx_space_free, portMAX_DELAY);
-            }
-
         }
+        vPortFree(req.buffer);
 
 
     } else {
@@ -233,7 +220,7 @@ bool Debug_Write(const char* text, LOG_LEVEL level) {
 
     //lock it for thread safety
     xSemaphoreTake(debugData.lock, portMAX_DELAY);
-    
+
     float sys_time = Get_System_Time();
 
     //fill the request struct
