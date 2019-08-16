@@ -65,7 +65,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 
 #define TX_FIFO_DEPTH 4
-#define RX_BUFFER_DEPTH 32
+#define RX_BUFFER_DEPTH 256
 // *****************************************************************************
 /* Application Data
 
@@ -170,7 +170,7 @@ void UART_Tasks(void)
         //it will get set to a proper value in the loop
         float end_time = Get_System_Time() + req.timeout_ms / 1000.0;
         uint32_t timeout_ticks = req.timeout_ms / portTICK_PERIOD_MS;
-        while (req.size > req.index && timeout_ticks)
+        while (req.size > req.index && timeout_ticks > 0)
         {
             float current_time = Get_System_Time();
             if (current_time > end_time)

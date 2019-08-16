@@ -56,6 +56,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "app.h"
 #include "Uart.h"
 #include "Debug.h"
+#include "Temperature.h"
+
 #include "stdio.h"
 #include "driver/tmr/src/drv_tmr_local.h"
 #include "system_config/default/system_config.h"
@@ -103,7 +105,6 @@ APP_DATA appData;
 
 void BSP_DelayUs(uint32_t microseconds) {
     uint32_t time;
-
     time = _CP0_GET_COUNT(); // Read Core Timer    
     time += (SYS_CLK_FREQ / 2 / 1000000) * microseconds; // calc the Stop Time    
     while ((int32_t) (time - _CP0_GET_COUNT()) > 0) {
@@ -125,13 +126,29 @@ void BSP_DelayUs(uint32_t microseconds) {
 
 void APP_Initialize(void) {
     /* Place the App state machine in its initial state. */
+    int i;
+
     appData.state = APP_STATE_INIT;
     appData.led_on = 0;
-    appData.profile.temperatures = pvPortMalloc(sizeof (int)*100);
-    appData.profile.times = pvPortMalloc(sizeof (int)*100);
+    appData.profile.temperatures = pvPortMalloc(sizeof (int)*600);
     appData.profile.entries = 0;
     appData.text = pvPortMalloc(64);
     appData.data = pvPortMalloc(64);
+    appData.reflow_index = 0;
+    RelayOff();
+    LEDOff();
+
+    //create a default reflow profile
+    for (i = 0; i < 600; i++) {
+        if (i < 180) {
+            appData.profile.temperatures[i] = 140;
+        } else if (i < 180 + 180) {
+            appData.profile.temperatures[i] = 230;
+        } else {
+            appData.profile.temperatures[i] = 0;
+        }
+    }
+    appData.profile.entries = 301;
 
     /* TODO: Initialize your application's state machine and other
      * parameters.
@@ -154,63 +171,44 @@ void APP_Tasks(void) {
         {
             Debug_Write("App initialized", LOG_LEVEL_INFO);
             appData.state = APP_STATE_AWAIT_COMMAND;
-
-
-            //            while (1) {
-            //BSP_DelayUs(200);
-
-            //            }
-
+            
             break;
         }
 
         case APP_STATE_AWAIT_COMMAND:
         {
 
-            Debug_Write("Awaiting command...", LOG_LEVEL_INFO);
-            char index = 0;
-            memset(appData.text, 0, 64);
-            memset(appData.data, 0, 64);
-            while (index < 64) {
-                char temp;
-                if (!Uart_Read(&temp, 1, 1000)) {
-                    appData.data[index] = temp;
-                    if ('\n' == temp) {
-                        //received the end of transmission byte
-                        snprintf(appData.text, 64, "Command received: %s", appData.data);
-                        Debug_Write(appData.text, LOG_LEVEL_INFO);
-                        Parse_Command(appData.data);
-                    }
-                    index++;
+            Receive_Command(100);
 
-                } else {
-                    //had an error so we reset the receive sequence
-                    return;
-                }
+            break;
+        }
 
-            }
-            //try to read one byte
-            //            int result = Uart_Read(reader, 1, 100);
-            //            if (!result) {
-            //                //no errors let's print what we got
-            //                int read_size = reader[0];
-            //                result = Uart_Read(reader, read_size, 100);
-            //                snprintf(data, 64, "%s", reader);
-            //                Debug_Write(data, LOG_LEVEL_INFO);
-            //                Parse_Command(reader);
-            //            }
-            //            vPortFree(reader);
-            //            vPortFree(data);
-
-            if (appData.led_on) {
-                LEDOff();
-                appData.led_on = 0;
+        case APP_STATE_EXECUTE_REFLOW:
+        {
+            Receive_Command(1000);
+            //if we are too cold, turn on the heat
+            if (Get_Temperature() < appData.profile.temperatures[appData.reflow_index]) {
+                RelayOn();
+                LEDOn();
             } else {
-                //want LED off for now
-                //LEDOn();
-                appData.led_on = 1;
+                RelayOff();
+                LEDOff();
             }
+            //increment the index so we check the next value against the temperature
+            appData.reflow_index++;
 
+            //reflow is complete, move into the done state
+            if (appData.reflow_index > appData.profile.entries)
+                appData.state = APP_STATE_REFLOW_DONE;
+            break;
+        }
+
+        case APP_STATE_REFLOW_DONE:
+        {
+            Debug_Write("Reflow complete.", LOG_LEVEL_INFO);
+            appData.state = APP_STATE_AWAIT_COMMAND;
+            RelayOff();
+            LEDOff();
             break;
         }
 
@@ -220,7 +218,31 @@ void APP_Tasks(void) {
             break;
         }
     }
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    //    vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
+int Receive_Command(int timeout_ms) {
+    //    Debug_Write("Awaiting command...", LOG_LEVEL_INFO);
+    char index = 0;
+    memset(appData.text, 0, 64);
+    memset(appData.data, 0, 64);
+    while (index < 64) {
+        char temp;
+        if (!Uart_Read(&temp, 1, timeout_ms)) {
+            appData.data[index] = temp;
+            if ('\n' == temp) {
+                //received the end of transmission byte
+                snprintf(appData.text, 64, "Command received: %s", appData.data);
+                Debug_Write(appData.text, LOG_LEVEL_INFO);
+                Parse_Command(appData.data);
+            }
+            index++;
+        } else {
+            //had an error so we reset the receive sequence
+            return -1;
+        }
+    }
+    return 0;
 }
 
 int Parse_Command(char * command) {
@@ -228,39 +250,32 @@ int Parse_Command(char * command) {
     cmd = strtok(command, ",");
     //returns 0 if matched
     if (!strcmp("PROFILE", cmd)) {
-        int time = 0;
         int temperature = 0;
         char * param1;
-        char * param2;
         param1 = strtok(NULL, ",");
-        param2 = strtok(NULL, ",");
 
-        if (param1 == 0 || param2 == 0)
+        if (param1 == 0)
             goto Parse_Error;
 
-        time = atoi(param1);
-        temperature = atoi(param2);
+        temperature = atoi(param1);
 
-        if (temperature == 0 || time == 0) {
+        if (temperature == 0) {
             goto Parse_Error;
         } else {
             char * data = pvPortMalloc(64);
-            snprintf(data, 64, "VALID COMMAND: %d %d", time, temperature);
+            snprintf(data, 64, "VALID COMMAND: PROFILE,%d", temperature);
             Debug_Write(data, LOG_LEVEL_INFO);
             vPortFree(data);
-            appData.profile.times[appData.profile.entries] = time;
             appData.profile.temperatures[appData.profile.entries] = temperature;
             appData.profile.entries++;
-
-            Sort_Profile_Entries(&appData.profile);
+            //            Sort_Profile_Entries(&appData.profile);
             return 0;
         }
     } else if (!strcmp("PROFILE?", cmd)) {
         char * temp = pvPortMalloc(sizeof (char)*32);
         int i;
         for (i = 0; i < appData.profile.entries; i++) {
-            snprintf(temp, 32, "%d %d",
-                    appData.profile.times[i],
+            snprintf(temp, 32, "%d",
                     appData.profile.temperatures[i]);
             Debug_Write(temp, LOG_LEVEL_INFO);
         }
@@ -274,13 +289,17 @@ int Parse_Command(char * command) {
         return 0;
     } else if (!strcmp("START", cmd)) {
         //if there are no entires, the profile can't be executed
+        if (appData.state == APP_STATE_AWAIT_COMMAND) {
+            appData.state = APP_STATE_EXECUTE_REFLOW;
+            appData.reflow_index = 0;   
+        }
 
-        Debug_Write("VALID COMMAND CLEAR PROFILE", LOG_LEVEL_INFO);
+        Debug_Write("STARTING", LOG_LEVEL_INFO);
         return 0;
     } else if (!strcmp("ABORT", cmd)) {
-        //if there are no entires, the profile can't be executed
 
-        Debug_Write("VALID COMMAND CLEAR PROFILE", LOG_LEVEL_INFO);
+        appData.state == APP_STATE_REFLOW_DONE;
+        Debug_Write("ABORTING", LOG_LEVEL_INFO);
         return 0;
     }
 
@@ -290,7 +309,7 @@ Parse_Error:
     return -1;
 
 }
-
+/*
 void Sort_Profile_Entries(Profile_t* profile) {
 
     Profile_t * temp_profile = pvPortMalloc(sizeof (Profile_t));
@@ -327,6 +346,7 @@ void Sort_Profile_Entries(Profile_t* profile) {
     vPortFree(temp_profile->times);
     vPortFree(temp_profile);
 }
+ */
 
 /*******************************************************************************
  End of File

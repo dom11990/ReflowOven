@@ -58,6 +58,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "temperature.h"
 #include "app.h"
 #include "debug.h"
+#include "interface.h"
 
 
 // *****************************************************************************
@@ -75,6 +76,7 @@ static void _UART_Tasks(void);
 static void _TEMPERATURE_Tasks(void);
 static void _APP_Tasks(void);
 static void _DEBUG_Tasks(void);
+static void _INTERFACE_Tasks(void);
 
 
 // *****************************************************************************
@@ -108,7 +110,7 @@ void SYS_Tasks ( void )
     /* Create OS Thread for TEMPERATURE Tasks. */
     xTaskCreate((TaskFunction_t) _TEMPERATURE_Tasks,
                 "TEMPERATURE Tasks",
-                1024, NULL, 1, NULL);
+                1024, NULL, 3, NULL);
 
     /* Create OS Thread for APP Tasks. */
     xTaskCreate((TaskFunction_t) _APP_Tasks,
@@ -118,7 +120,12 @@ void SYS_Tasks ( void )
     /* Create OS Thread for DEBUG Tasks. */
     xTaskCreate((TaskFunction_t) _DEBUG_Tasks,
                 "DEBUG Tasks",
-                1024, NULL, 2, NULL);
+                1024, NULL, 4, NULL);
+
+    /* Create OS Thread for INTERFACE Tasks. */
+    xTaskCreate((TaskFunction_t) _INTERFACE_Tasks,
+                "INTERFACE Tasks",
+                2048, NULL, 1, NULL);
 
     /**************
      * Start RTOS * 
@@ -218,6 +225,23 @@ static void _DEBUG_Tasks(void)
     while(1)
     {
         DEBUG_Tasks();
+    }
+}
+
+
+/*******************************************************************************
+  Function:
+    void _INTERFACE_Tasks ( void )
+
+  Summary:
+    Maintains state machine of INTERFACE.
+*/
+
+static void _INTERFACE_Tasks(void)
+{
+    while(1)
+    {
+        INTERFACE_Tasks();
     }
 }
 

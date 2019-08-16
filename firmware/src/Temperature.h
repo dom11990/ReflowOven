@@ -220,6 +220,11 @@ extern "C" {
 
     void TEMPERATURE_Tasks(void);
 
+    /**
+     * Returns the most recent temperature average.
+     * @return 
+     */
+    float Get_Temperature();
 
 #endif /* _TEMPERATURE_H */
 

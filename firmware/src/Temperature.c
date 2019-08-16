@@ -171,7 +171,7 @@ void TEMPERATURE_Tasks(void) {
             result = DRV_SPI_BufferAddRead2(temperatureData.spi,
                     &temperatureData.latest_read, 4,
                     SPI_Callback, (void *) &temperatureData, &handle);
-            
+
             temperatureData.state = TEMPERATURE_PROCESS;
             break;
         }
@@ -184,26 +184,28 @@ void TEMPERATURE_Tasks(void) {
 
             temperatureData.measured[temperatureData.count] =
                     temperatureData.status.thermocouple;
-            
+
             temperatureData.count++;
             //if we need more samples, continue looping. otherwise go to done 
             if (temperatureData.count < AVERAGES)
                 temperatureData.state = TEMPERATURE_READ;
             else
                 temperatureData.state = TEMPERATURE_DONE;
-            
+
             break;
         }
         case TEMPERATURE_DONE:
         {
             int i = 0;
-            temperatureData.average = 0;
+            int average = 0;
             for (i = 0; i < AVERAGES; i++)
-                temperatureData.average += temperatureData.measured[i];
-            temperatureData.average /= AVERAGES;
-            char * buffer = pvPortMalloc(32);
+                average += temperatureData.measured[i];
+            
+            average /= AVERAGES;
+            temperatureData.average = average;
+            char * buffer = pvPortMalloc(64 * sizeof (char));
             snprintf(buffer, 64, "Current Temp: %f Fault: %d",
-                    temperatureData.average,temperatureData.status.fault);
+                    temperatureData.average, temperatureData.status.fault);
             Debug_Write(buffer, LOG_LEVEL_DEBUG);
             vPortFree(buffer);
             temperatureData.state = TEMPERATURE_START;
@@ -213,6 +215,10 @@ void TEMPERATURE_Tasks(void) {
             break;
         }
     }
+}
+
+float Get_Temperature() {
+    return temperatureData.average;
 }
 
 

@@ -254,7 +254,7 @@ void Debug_Task_Stacks() {
     TaskStatus_t * index = status;
     uint32_t runtime;
     uxTaskGetSystemState(status, count, &runtime);
-    char * taskinfo = pvPortMalloc(32);
+    char * taskinfo = pvPortMalloc(32*sizeof(char));
     while (count) {
         snprintf(taskinfo, 32, "%s stack left: %d", index->pcTaskName,
                 index->usStackHighWaterMark);

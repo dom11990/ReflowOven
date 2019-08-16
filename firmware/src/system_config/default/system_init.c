@@ -260,6 +260,7 @@ void SYS_Initialize ( void* data )
     TEMPERATURE_Initialize();
     APP_Initialize();
     DEBUG_Initialize();
+    INTERFACE_Initialize();
 }
 
 

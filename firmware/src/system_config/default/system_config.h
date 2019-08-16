@@ -97,7 +97,7 @@ extern "C" {
 #define SYS_PORT_A_CNEN         0x0000
 
 #define SYS_PORT_B_ANSEL        0x1C43
-#define SYS_PORT_B_TRIS         0x3FFF
+#define SYS_PORT_B_TRIS         0x3F7F
 #define SYS_PORT_B_LAT          0x0000
 #define SYS_PORT_B_ODC          0x0000
 #define SYS_PORT_B_CNPU         0x0000
@@ -265,6 +265,13 @@ extern "C" {
 #define MAX_nCSStateGet() PLIB_PORTS_PinGetLatched(PORTS_ID_0, PORT_CHANNEL_A, PORTS_BIT_POS_4)
 #define MAX_nCSStateSet(Value) PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_A, PORTS_BIT_POS_4, Value)
 
+/*** Functions for Relay pin ***/
+#define RelayToggle() PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_7)
+#define RelayOn() PLIB_PORTS_PinSet(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_7)
+#define RelayOff() PLIB_PORTS_PinClear(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_7)
+#define RelayStateGet() PLIB_PORTS_PinGetLatched(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_7)
+#define RelayStateSet(Value) PLIB_PORTS_PinWrite(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_7, Value)
+
 /*** Functions for LED pin ***/
 #define LEDToggle() PLIB_PORTS_PinToggle(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_15)
 #define LEDOn() PLIB_PORTS_PinSet(PORTS_ID_0, PORT_CHANNEL_B, PORTS_BIT_POS_15)
@@ -280,6 +287,8 @@ extern "C" {
 /*** Application Instance 2 Configuration ***/
 
 /*** Application Instance 3 Configuration ***/
+
+/*** Application Instance 4 Configuration ***/
 
 //DOM-IGNORE-BEGIN
 #ifdef __cplusplus

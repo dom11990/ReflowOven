@@ -92,6 +92,7 @@ extern "C" {
         APP_STATE_INIT = 0,
         APP_STATE_AWAIT_COMMAND = 1,
         APP_STATE_EXECUTE_REFLOW = 2,
+        APP_STATE_REFLOW_DONE = 3,
 
         /* TODO: Define states used by the application state machine. */
 
@@ -113,7 +114,7 @@ extern "C" {
      */
 
     typedef struct {
-        int * times;
+        //one temperature entry for 5 seconds
         int * temperatures;
         int entries;
     } Profile_t;
@@ -125,7 +126,7 @@ extern "C" {
         Profile_t profile;
         char * data;
         char * text;
-
+        int reflow_index;
 
 
     } APP_DATA;
@@ -211,9 +212,13 @@ extern "C" {
 
     void APP_Tasks(void);
 
+    //parses and executes the provided command
     int Parse_Command(char * command);
-    
-    void Sort_Profile_Entries(Profile_t* profile);
+
+    //waits specified number of ticks for a command to come in. If a command
+    //is received it is immediately parsed and executed.
+    int Receive_Command(int timeout_ms);
+    //    void Sort_Profile_Entries(Profile_t* profile);
 
 #endif /* _APP_H */
 

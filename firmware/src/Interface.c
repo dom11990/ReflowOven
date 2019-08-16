@@ -154,7 +154,7 @@ void INTERFACE_Tasks ( void )
 
         case INTERFACE_STATE_SERVICE_TASKS:
         {
-        
+            vTaskDelay(500/portTICK_PERIOD_MS);
             break;
         }
 
