@@ -104,7 +104,9 @@ extern "C" {
         float dk;
         float last_error;
         float integral;
-    } pid_instance_t;
+    } pid_t;
+    
+    typedef pid_t *pid_instance_t;
 
 
     // *****************************************************************************
@@ -125,13 +127,13 @@ extern "C" {
      * @param dk
      * @return 
      */
-    pid_instance_t * Create_PID(float pk, float ik, float dk);
+    pid_instance_t Create_PID(float pk, float ik, float dk);
 
     /**
      * Releases memory associated with the PID instance
      * @param pi
      */
-    void Destroy_PID(pid_instance_t * pi);
+    void PID_Destroy(pid_instance_t pi);
 
     /**
      * Calculates the result of the pid control and stores the current error for
@@ -141,8 +143,23 @@ extern "C" {
      * @param set_point
      * @return 
      */
-    float Compute(pid_instance_t * pi, float variable, float set_point);
+    float PID_Compute(pid_instance_t pi, float variable, float set_point);
 
+    /**
+     * Reconfigures an existing instance with new parameters
+     * @param pi pid instance
+     * @param pk proportional constant
+     * @param ik integral constant
+     * @param dk derivative constant
+     */
+    void PID_Configure_Parameters(pid_instance_t pi, float pk, float ik, float dk);
+    
+    /**
+     * Resets the internal state of the PID controller (integral and error = 0)
+     * @param pi
+     */
+    void PID_Reset_State(pid_instance_t pi);
+    
     /* Provide C++ Compatibility */
 #ifdef __cplusplus
 }

@@ -73,40 +73,49 @@
 /* ************************************************************************** */
 
 
-pid_instance_t * Create_PID(float pk, float ik, float dk) {
-    pid_instance_t * pi = pvPortMalloc(sizeof (pid_instance_t));
+pid_instance_t PID_Create(float pk, float ik, float dk) {
+    pid_instance_t pi = pvPortMalloc(sizeof (pid_t));
 
     //fail to allocated?
     if (!pi)
         return 0;
 
     //allocation successful, assign the parameters
-    pi->pk = pk;
-    pi->ik = ik;
-    pi->dk = dk;
+    PID_Configure_Parameters(pi,pk,ik,dk);
     pi->last_error = 0;
     pi->integral = 0;
     return pi;
 }
 
-void Destroy_PID(pid_instance_t* pi) {
+void PID_Destroy(pid_instance_t pi) {
     if (pi)
         vPortFree(pi);
 }
 
-float Compute(pid_instance_t * pi, float variable, float set_point) {
+float PID_Compute(pid_instance_t pi, float variable, float set_point) {
     float result;
     float derivative;
     float error = set_point - variable;
-    
+
     pi->integral += error;
     derivative = error - pi->last_error;
-    result = error*pi->pk + pi->integral*pi->ik + derivative*pi->dk;
+    result = error * pi->pk + pi->integral * pi->ik + derivative * pi->dk;
     //update the error
     pi->last_error = error;
     return result;
 }
 
+void PID_Configure_Parameters(pid_instance_t pi, float pk, float ik, float dk) {
+    pi->pk = pk;
+    pi->ik = ik;
+    pi->dk = dk;
+    return;
+}
+
+void PID_Reset_State(pid_instance_t pi){
+    pi->integral = 0;
+    pi->last_error = 0;
+}
 /* *****************************************************************************
  End of File
  */

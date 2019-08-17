@@ -68,7 +68,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // Section: Global Data Definitions
 // *****************************************************************************
 // *****************************************************************************
-#define TX_FIFO_DEPTH 8
+#define TX_FIFO_DEPTH 4
 #define RX_BUFFER_SIZE 32
 // *****************************************************************************
 /* Application Data
@@ -225,7 +225,6 @@ bool Debug_Write(const char* text, LOG_LEVEL level) {
 
     //fill the request struct
     DEBUG_REQUEST request;
-    volatile int stringlenght = strlen(text);
     request.size = 32 + strlen(text);
     request.buffer = pvPortMalloc(request.size);
     //snprintf may return more than the buffer size, in that case

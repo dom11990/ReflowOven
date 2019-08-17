@@ -197,7 +197,7 @@ void TEMPERATURE_Tasks(void) {
         case TEMPERATURE_DONE:
         {
             int i = 0;
-            int average = 0;
+            float average = 0;
             for (i = 0; i < AVERAGES; i++)
                 average += temperatureData.measured[i];
             

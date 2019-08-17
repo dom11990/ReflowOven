@@ -52,6 +52,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 
+
+#include "support/pid.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -67,6 +70,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 extern "C" {
 
 #endif
+
+#define TEXT_BUFFER_SIZE 64
     // DOM-IGNORE-END 
 
     // *****************************************************************************
@@ -74,7 +79,6 @@ extern "C" {
     // Section: Type Definitions
     // *****************************************************************************
     // *****************************************************************************
-
     // *****************************************************************************
 
     /* Application states
@@ -91,8 +95,9 @@ extern "C" {
         /* Application's state machine's initial state. */
         APP_STATE_INIT = 0,
         APP_STATE_AWAIT_COMMAND = 1,
-        APP_STATE_EXECUTE_REFLOW = 2,
-        APP_STATE_REFLOW_DONE = 3,
+        APP_STATE_START_REFLOW = 2,
+        APP_STATE_EXECUTE_REFLOW = 3,
+        APP_STATE_REFLOW_DONE = 4,
 
         /* TODO: Define states used by the application state machine. */
 
@@ -100,6 +105,12 @@ extern "C" {
 
 
     // *****************************************************************************
+
+    typedef struct {
+        //one temperature entry for 5 seconds
+        int * temperatures;
+        int entries;
+    } Profile_t;
 
     /* Application Data
 
@@ -112,24 +123,23 @@ extern "C" {
       Remarks:
         Application strings and buffers are be defined outside this structure.
      */
-
-    typedef struct {
-        //one temperature entry for 5 seconds
-        int * temperatures;
-        int entries;
-    } Profile_t;
-
     typedef struct {
         /* The application's current state */
         APP_STATES state;
         int led_on;
         Profile_t profile;
+        //used for receiving data from uart
         char * data;
+        //used to write text out to the uart
         char * text;
         int reflow_index;
+        pid_instance_t pi;
 
 
     } APP_DATA;
+
+
+
 
 
     // *****************************************************************************

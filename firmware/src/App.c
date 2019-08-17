@@ -133,8 +133,9 @@ void APP_Initialize(void) {
     appData.profile.temperatures = pvPortMalloc(sizeof (int)*600);
     appData.profile.entries = 0;
     appData.text = pvPortMalloc(64);
-    appData.data = pvPortMalloc(64);
+    appData.data = pvPortMalloc(TEXT_BUFFER_SIZE);
     appData.reflow_index = 0;
+    appData.pi = PID_Create(5.0, 0, 40.0);
     RelayOff();
     LEDOff();
 
@@ -171,7 +172,7 @@ void APP_Tasks(void) {
         {
             Debug_Write("App initialized", LOG_LEVEL_INFO);
             appData.state = APP_STATE_AWAIT_COMMAND;
-            
+
             break;
         }
 
@@ -183,11 +184,27 @@ void APP_Tasks(void) {
             break;
         }
 
+        case APP_STATE_START_REFLOW:
+        {
+            appData.reflow_index = 0;
+            PID_Reset_State(appData.pi);
+            Debug_Write("STARTING", LOG_LEVEL_INFO);
+            appData.state = APP_STATE_EXECUTE_REFLOW;
+            break;
+        }
+
         case APP_STATE_EXECUTE_REFLOW:
         {
             Receive_Command(1000);
             //if we are too cold, turn on the heat
-            if (Get_Temperature() < appData.profile.temperatures[appData.reflow_index]) {
+            float current_temp = Get_Temperature();
+            float desired_temp = appData.profile.temperatures[appData.reflow_index];
+            float process = PID_Compute(appData.pi, current_temp, desired_temp);
+            snprintf(appData.text, TEXT_BUFFER_SIZE,
+                    "PID Calculation:%.2f,CV:%.2f,SP:%.2f,Integral: %.2f",
+                    process, current_temp, desired_temp, appData.pi->integral);
+            Debug_Write(appData.text, LOG_LEVEL_INFO);
+            if (process > 0) {
                 RelayOn();
                 LEDOn();
             } else {
@@ -206,9 +223,10 @@ void APP_Tasks(void) {
         case APP_STATE_REFLOW_DONE:
         {
             Debug_Write("Reflow complete.", LOG_LEVEL_INFO);
-            appData.state = APP_STATE_AWAIT_COMMAND;
+            //turn everything off
             RelayOff();
             LEDOff();
+            appData.state = APP_STATE_AWAIT_COMMAND;
             break;
         }
 
@@ -249,6 +267,7 @@ int Parse_Command(char * command) {
     char* cmd;
     cmd = strtok(command, ",");
     //returns 0 if matched
+    /**************************************************************************/
     if (!strcmp("PROFILE", cmd)) {
         int temperature = 0;
         char * param1;
@@ -271,6 +290,7 @@ int Parse_Command(char * command) {
             //            Sort_Profile_Entries(&appData.profile);
             return 0;
         }
+        /**********************************************************************/
     } else if (!strcmp("PROFILE?", cmd)) {
         char * temp = pvPortMalloc(sizeof (char)*32);
         int i;
@@ -282,26 +302,51 @@ int Parse_Command(char * command) {
         vPortFree(temp);
         Debug_Write("VALID COMMAND PROFILE?", LOG_LEVEL_INFO);
         return 0;
+        /**********************************************************************/
     } else if (!strcmp("CLEAR_PROFILE", cmd)) {
         //if there are no entires, the profile can't be executed
         appData.profile.entries = 0;
         Debug_Write("VALID COMMAND CLEAR PROFILE", LOG_LEVEL_INFO);
         return 0;
+        /**********************************************************************/
     } else if (!strcmp("START", cmd)) {
         //if there are no entires, the profile can't be executed
         if (appData.state == APP_STATE_AWAIT_COMMAND) {
-            appData.state = APP_STATE_EXECUTE_REFLOW;
-            appData.reflow_index = 0;   
+            appData.state = APP_STATE_START_REFLOW;
         }
-
-        Debug_Write("STARTING", LOG_LEVEL_INFO);
         return 0;
+        /**********************************************************************/
     } else if (!strcmp("ABORT", cmd)) {
-
-        appData.state == APP_STATE_REFLOW_DONE;
         Debug_Write("ABORTING", LOG_LEVEL_INFO);
+        appData.state = APP_STATE_REFLOW_DONE;
         return 0;
+        /**********************************************************************/
+
+    } else if (!strcmp("PID_CLEAR", cmd)) {
+        PID_Reset_State(appData.pi);
+        Debug_Write("Resetting PID state", LOG_LEVEL_INFO);
+        return 0;
+        /**********************************************************************/
+    } else if (!strcmp("PID", cmd)) {
+        char * param1 = strtok(NULL, ",");
+        char * param2 = strtok(NULL, ",");
+        char * param3 = strtok(NULL, ",");
+        float pk, ik, dk;
+
+        if (!param1 || !param2 || !param3) {
+            goto Parse_Error;
+        }
+        pk = atof(param1);
+        ik = atof(param2);
+        dk = atof(param3);
+        PID_Configure_Parameters(appData.pi, pk, ik, dk);
+        snprintf(appData.text, TEXT_BUFFER_SIZE,
+                "Updating PID: pk=%.2f,ik=%.2f,dk=%.2f", pk, ik, dk);
+        Debug_Write(appData.text, LOG_LEVEL_INFO);
+        return 0;
+        /**********************************************************************/
     }
+
 
 Parse_Error:
     Debug_Write("Invalid command", LOG_LEVEL_ERROR);
