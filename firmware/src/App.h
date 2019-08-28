@@ -231,6 +231,8 @@ extern "C" {
     int Receive_Command(int timeout_ms);
     //    void Sort_Profile_Entries(Profile_t* profile);
 
+//    void vApplicationIdleHook( void );
+    
 #endif /* _APP_H */
 
     //DOM-IGNORE-BEGIN

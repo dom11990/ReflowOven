@@ -57,6 +57,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "Uart.h"
 #include "Debug.h"
 #include "Temperature.h"
+#include <p32xxxx.h>
 
 #include "stdio.h"
 #include "string.h"
@@ -353,6 +354,9 @@ int Parse_Command(char * command) {
         Debug_Write(appData.text, LOG_LEVEL_INFO);
         return 0;
         /**********************************************************************/
+    } else if (!strcmp("DEBUG", cmd)) {
+        Debug_Task_Stacks();
+        return 0;
     } else if (!strcmp("HELP", cmd) ||
             !strcmp("H", cmd) ||
             !strcmp("help", cmd) ||
@@ -373,6 +377,11 @@ Parse_Error:
     return -1;
 
 }
+//
+//void vApplicationIdleHook(void) {
+//    _wait();
+//}
+
 /*
 void Sort_Profile_Entries(Profile_t* profile) {
 

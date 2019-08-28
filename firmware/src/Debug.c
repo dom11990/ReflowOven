@@ -253,7 +253,7 @@ void Debug_Task_Stacks() {
     TaskStatus_t * index = status;
     uint32_t runtime;
     uxTaskGetSystemState(status, count, &runtime);
-    char * taskinfo = pvPortMalloc(32*sizeof(char));
+    char * taskinfo = pvPortMalloc(32 * sizeof (char));
     while (count) {
         snprintf(taskinfo, 32, "%s stack left: %d", index->pcTaskName,
                 index->usStackHighWaterMark);
@@ -261,6 +261,10 @@ void Debug_Task_Stacks() {
         index++;
         count--;
     }
+    snprintf(taskinfo, 32, "Current heap: %d, Min: %d",
+            xPortGetFreeHeapSize(), xPortGetMinimumEverFreeHeapSize());
+    Debug_Write(taskinfo, LOG_LEVEL_TRACE);
+
     vPortFree(taskinfo);
     vPortFree(status);
 }
