@@ -64,7 +64,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "temperature.h"
 #include "app.h"
 #include "debug.h"
-#include "interface.h"
 #include "system_definitions.h"
 
 // *****************************************************************************

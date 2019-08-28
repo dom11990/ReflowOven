@@ -106,7 +106,7 @@ extern "C" {
         float integral;
     } pid_t;
     
-    typedef pid_t *pid_instance_t;
+    typedef pid_t* pid_instance_t;
 
 
     // *****************************************************************************
@@ -127,7 +127,7 @@ extern "C" {
      * @param dk
      * @return 
      */
-    pid_instance_t Create_PID(float pk, float ik, float dk);
+    pid_instance_t PID_Create(float pk, float ik, float dk);
 
     /**
      * Releases memory associated with the PID instance

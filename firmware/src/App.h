@@ -71,7 +71,8 @@ extern "C" {
 
 #endif
 
-#define TEXT_BUFFER_SIZE 64
+#define TEXT_BUFFER_SIZE 128
+#define DATA_BUFFER_SIZE 64
     // DOM-IGNORE-END 
 
     // *****************************************************************************

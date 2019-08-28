@@ -59,6 +59,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "Temperature.h"
 
 #include "stdio.h"
+#include "string.h"
+
 #include "driver/tmr/src/drv_tmr_local.h"
 #include "system_config/default/system_config.h"
 // *****************************************************************************
@@ -132,8 +134,8 @@ void APP_Initialize(void) {
     appData.led_on = 0;
     appData.profile.temperatures = pvPortMalloc(sizeof (int)*600);
     appData.profile.entries = 0;
-    appData.text = pvPortMalloc(64);
-    appData.data = pvPortMalloc(TEXT_BUFFER_SIZE);
+    appData.text = pvPortMalloc(TEXT_BUFFER_SIZE);
+    appData.data = pvPortMalloc(DATA_BUFFER_SIZE);
     appData.reflow_index = 0;
     appData.pi = PID_Create(5.0, 0, 40.0);
     RelayOff();
@@ -171,7 +173,7 @@ void APP_Tasks(void) {
         case APP_STATE_INIT:
         {
             Debug_Write("App initialized", LOG_LEVEL_INFO);
-            appData.state = APP_STATE_AWAIT_COMMAND;
+            appData.state = APP_STATE_START_REFLOW;
 
             break;
         }
@@ -240,19 +242,22 @@ void APP_Tasks(void) {
 }
 
 int Receive_Command(int timeout_ms) {
-    //    Debug_Write("Awaiting command...", LOG_LEVEL_INFO);
+    //    Expect incoming string to be terminated with \n
     char index = 0;
     memset(appData.text, 0, 64);
     memset(appData.data, 0, 64);
     while (index < 64) {
         char temp;
         if (!Uart_Read(&temp, 1, timeout_ms)) {
-            appData.data[index] = temp;
             if ('\n' == temp) {
                 //received the end of transmission byte
-                snprintf(appData.text, 64, "Command received: %s", appData.data);
+                snprintf(appData.text, TEXT_BUFFER_SIZE, "Command received: %s", appData.data);
                 Debug_Write(appData.text, LOG_LEVEL_INFO);
-                Parse_Command(appData.data);
+                appData.data[index] = '\0';
+                return Parse_Command(appData.data);
+
+            } else {
+                appData.data[index] = temp;
             }
             index++;
         } else {
@@ -265,13 +270,16 @@ int Receive_Command(int timeout_ms) {
 
 int Parse_Command(char * command) {
     char* cmd;
-    cmd = strtok(command, ",");
+    cmd = strtok(command, " ");
+
+
+
     //returns 0 if matched
     /**************************************************************************/
     if (!strcmp("PROFILE", cmd)) {
         int temperature = 0;
         char * param1;
-        param1 = strtok(NULL, ",");
+        param1 = strtok(NULL, " ");
 
         if (param1 == 0)
             goto Parse_Error;
@@ -328,9 +336,9 @@ int Parse_Command(char * command) {
         return 0;
         /**********************************************************************/
     } else if (!strcmp("PID", cmd)) {
-        char * param1 = strtok(NULL, ",");
-        char * param2 = strtok(NULL, ",");
-        char * param3 = strtok(NULL, ",");
+        char * param1 = strtok(NULL, " ");
+        char * param2 = strtok(NULL, " ");
+        char * param3 = strtok(NULL, " ");
         float pk, ik, dk;
 
         if (!param1 || !param2 || !param3) {
@@ -345,9 +353,20 @@ int Parse_Command(char * command) {
         Debug_Write(appData.text, LOG_LEVEL_INFO);
         return 0;
         /**********************************************************************/
+    } else if (!strcmp("HELP", cmd) ||
+            !strcmp("H", cmd) ||
+            !strcmp("help", cmd) ||
+            !strcmp("h", cmd) ||
+            !strcmp("?", cmd)) {
+        snprintf(appData.text, TEXT_BUFFER_SIZE,
+                "Allowed commands:\nSTART\nABORT\nPID_CLEAR\nPID [p_k] [i_k] [d_k]");
+        Debug_Write(appData.text, LOG_LEVEL_INFO);
+        return 0;
+        /**********************************************************************/
     }
 
-
+    snprintf(appData.text, TEXT_BUFFER_SIZE, "strcmp: %d", strcmp("h", cmd));
+    Debug_Write(appData.text, LOG_LEVEL_INFO);
 Parse_Error:
     Debug_Write("Invalid command", LOG_LEVEL_ERROR);
     Debug_Write(command, LOG_LEVEL_ERROR);
